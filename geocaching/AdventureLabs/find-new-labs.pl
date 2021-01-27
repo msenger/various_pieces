@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-our $VERSION = '4.1.0';
+our $VERSION = '4.2.0';
 
 #------------------------------------------
 # Command-line arguments and script usage
@@ -18,19 +18,23 @@ my ($opt_help, $opt_v, $opt_q, $opt_vv);
 my ($opt_lat, $opt_lon, $opt_rad);
 my ($czechia, $slovakia, $opt_w, $opt_n);
 my ($csv, $czfile);
+my ($user, $pass);
+my $authfile;  # default value 'authfile.txt'
+my $arch = 0;  # by default do not check whether series should be archived
+
 BEGIN {
 
    sub usage {
 	    print STDERR <<"END_OF_USAGE";
 Usage:
-   $0 [volby] [-lat <latitude> -lon <longitude> -rad <radius>]
+   $0 [volby] [-lat <latitude> -lon <longitude> -rad <radius>] [auth]
       hleda serie od stredu <latitude>,<longitude> v kruhu o polomeru <radius>,
       souradnice jsou float number, radius je integer v kilometrech
       
-   $0 [volby] [-cesko] | [-slovensko]
+   $0 [volby] [-cesko] | [-slovensko] [auth]
       hleda serie jen v Cesku nebo jen na Slovensku (a v blizkem okoli))
 
-   $0 [volby] [-czfile <filename>]
+   $0 [volby] [-czfile <filename>] [auth]
       pri zadnem zadani se hleda v Cesku a Slovensku (a blizkem okoli),
       je-li zadan soubor <filename>, pak se jeho obsahem prepisi interni
       hodnoty definujici rozsahy pro Cesko
@@ -48,6 +52,13 @@ Usage:
       -q[uiet]    ...  nebude vypisovat informace o prubehu (quiet)
       -w[arnings] ...  nezrusi warnings z volaneho modulu
       -n[get]     ...  nespusti na konci get-lab.pl
+      
+   [auth] autentikuje pristup na nas server, tedy urcuje username a heslo
+      -user <username>     ... username
+      -pass <heslo>        ... heslo
+      -authfile <filename> ... soubor se jmenem uzivatele a heslem,
+                               default je 'authfile.txt',
+                               pouzije se, jen pokud neni zadano -user a -pass                             
                              
 END_OF_USAGE
    }
@@ -74,13 +85,19 @@ END_OF_USAGE
                 cesko              => \$czechia,
                 slovensko          => \$slovakia,
                 csv                => \$csv,
-                'czfile=s'         => \$czfile,     
+                'czfile=s'         => \$czfile,
+                
+                'authfile=s'       => \$authfile,     
+                'user=s'           => \$user,
+                'pass=s'           => \$pass,
                  
    ) or usage() and exit(1);
    usage() and exit(0) if $opt_help;
 
    sub qmsg    { print STDERR shift unless $opt_q; }   
    sub verbose { print STDOUT shift if $opt_vv}
+
+   $authfile = 'authfile.txt' unless $authfile;
 
 }  # end of BEGIN
 
@@ -96,6 +113,7 @@ qmsg ($datestring . " - ") unless $csv;
 use JSON;
 use Data::Dumper;
 use Text::CSV;
+use File::Slurp qw(read_file);
 
 # ----------------------------------------------------------------
 # This is how to set basic authentication for a user agent.
@@ -107,7 +125,16 @@ use base 'LWP::UserAgent';
  
 sub get_basic_credentials {
     my ($self, $realm, $url) = @_;
-    return 'tulak', 'q38jBmp!C';   # TBD better
+    if ($user && $pass) {
+        return $user, $pass;
+    } else {
+        my $credentials = main::read_config ($authfile);
+        if ($credentials->{'user'} && $credentials->{'pass'}) {
+           return $credentials->{'user'}, $credentials->{'pass'};
+        } else {
+           die "The file $authfile does not contain 'user' and/or 'pass' properties\n."
+        }
+    }
 }
 package main;
 
@@ -188,59 +215,6 @@ my $maxLS = 500;    # maximum number of fetched series in one call
 # predefined regions
 my $circles;
 my $circles_CZ = [
-    # verze 1
-#    {'start_lat' => 49.7851350,
-#     'start_lon' => 14.1037503,
-#     'radiusKm'  => 166},
-#    {'start_lat' => 49.7064814,
-#     'start_lon' => 17.0952289,
-#     'radiusKm'  => 139}
-
-#    # verze 2
-#    {'start_lat' => 49.53236,
-#     'start_lon' => 17.380371,
-#     'radiusKm'  => 108},
-#    {'start_lat' => 50.24372,
-#     'start_lon' => 15.06775,
-#     'radiusKm'  => 106},
-#    {'start_lat' => 49.76707,
-#     'start_lon' => 12.919917,
-#     'radiusKm'  => 85},     
-#    {'start_lat' => 49.09545,
-#     'start_lon' => 14.282233,
-#     'radiusKm'  => 67},
-#    {'start_lat' => 49.01267,
-#     'start_lon' => 15.7489,
-#     'radiusKm'  => 60},
-#    {'start_lat' => 50.5937,
-#     'start_lon' => 13.529667,
-#     'radiusKm'  => 26}
-
-    # verze 3
-#   {'start_lat' => 49.53236,
-#    'start_lon' => 17.380371,
-#     'radiusKm'  => 108},
-#    {'start_lat' => 50.24372,
-#     'start_lon' => 15.06775,
-#     'radiusKm'  => 106},
-#    {'start_lat' => 49.76707,
-#     'start_lon' => 12.919917,
-#     'radiusKm'  => 85},     
-#    {'start_lat' => 49.09545,
-#     'start_lon' => 14.282233,
-#     'radiusKm'  => 67},
-#    {'start_lat' => 49.01267,
-#     'start_lon' => 15.7489,
-#     'radiusKm'  => 60},
-#    {'start_lat' => 50.5937,
-#     'start_lon' => 13.529667,
-#     'radiusKm'  => 26},
-#    {'start_lat' => 50.5937,
-#     'start_lon' => 13.529667,
-#     'radiusKm'  => 26},
-#    {'start_lat' => 50.5937,
-#     'start_lon' => 13.529667,
-#     'radiusKm'  => 26}
 
     # verze 4
     {'start_lat' => 50.057135,
@@ -342,6 +316,7 @@ if ($czechia) {
                 'radiusKm'  => $opt_rad}];
 } else {
    # both Czechia and Slovakia
+   $arch = 1;   # test series whether archive to archive them
    $circles = $circles_CZ;
    push (@$circles, @$circles_SK);
 }
@@ -387,10 +362,13 @@ foreach my $err (@{$errors}) {
 }   
 
 # there may be some serie at our server that should be archived because
-# they were not reported by swagger, at all
-foreach my $key (keys %$to_be_archived) {
-   my $serie_name = $to_be_archived->{$key};
-   print STDOUT "To be archived: [$key] [$serie_name]\n";
+# they were not reported by swagger
+if ($arch) {
+    verbose ("Checking whether there are series to be archived\n");
+    foreach my $key (keys %$to_be_archived) {
+        my $serie_name = $to_be_archived->{$key};
+        print STDOUT "To be archived: [$key] [$serie_name]\n";
+    }
 }
 
 # report some statistics
@@ -435,7 +413,7 @@ sub process_new_ones {
       my $visibility = $serie->{Visibility}; 
 
       next if ($tested_series->{$serie_id});   # ignore overlapping series in more circles
-      $tested_series->{$serie_id} = 1;         # and remember this series    
+      $tested_series->{$serie_id} = 1;         # and remember this serie    
       next if $serie->{IsTest};                # ignore special series (what's that?)
       next if $serie->{IsArchived};            # ignore archived series (usually false, anyway)
 
@@ -571,6 +549,16 @@ sub csvfile2perl {
    }
    return $result;   
 }   
+
+# ----------------------------------------------------------------
+# Read a simple config file made of key=value pairs.
+# Return a refernce to a hash with found pairs.
+# ----------------------------------------------------------------
+sub read_config {
+   my $filename = shift;
+   my %result = read_file ($filename, err_mode => 'croak') =~ /^(\w+)=(.*)$/mg;
+   return \%result;
+}
 
 __END__   
 

@@ -1,0 +1,6 @@
+# soubor obsahující v plain textu jméno a heslo k přístupu na labgpx.cz;
+# z tohoto vzoru si vytvor soubor authfile.txt se svym jmenem a heslem
+#
+user=***
+pass=***
+
