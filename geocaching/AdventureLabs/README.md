@@ -28,6 +28,14 @@ smart-to-labid.pl
 
 Převede zadaný smart link na labid. Volby ukáže: perl smart-to-labid.pl -help.
 
+wrap-and-email.pl
+=================
+
+Takhle to funguje v crontabu:
+
+15 6-23 * * * cd /home/senger/alabs ; perl find-new-labs.pl -nget -q 2>&1 | perl wrap-and-email.pl
+
+
 
 
 
