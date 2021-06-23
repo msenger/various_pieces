@@ -70,12 +70,12 @@ use open OUT => ':utf8';
 
 my $ua = LWP::UserAgent->new;
 $ua->agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36");
+$ua->default_header ('X-Consumer-Key' => "A01A9CA1-29E0-46BD-A270-9D894A527B91");
 my $json = JSON->new->utf8->allow_nonref;
 
 # ----------------------------------------------------------------
 # Get a serie by its ID (e.g. 11ae0700-3716-4979-acde-0a8977e04271)
 # ----------------------------------------------------------------
-
 my $serieIds = [@ARGV];
 
 # for testing
