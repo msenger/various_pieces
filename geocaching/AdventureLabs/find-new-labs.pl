@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-our $VERSION = '4.2.0';
+our $VERSION = '4.3.0';
 
 #------------------------------------------
 # Command-line arguments and script usage
@@ -18,7 +18,7 @@ my ($opt_help, $opt_v, $opt_q, $opt_vv);
 my ($opt_lat, $opt_lon, $opt_rad);
 my ($czechia, $slovakia, $opt_w, $opt_n);
 my ($csv, $czfile);
-my ($user, $pass);
+my ($user, $pass, $ck);
 my $authfile;  # default value 'authfile.txt'
 my $arch = 0;  # by default do not check whether series should be archived
 
@@ -53,12 +53,15 @@ Usage:
       -w[arnings] ...  nezrusi warnings z volaneho modulu
       -n[get]     ...  nespusti na konci get-lab.pl
       
-   [auth] autentikuje pristup na nas server, tedy urcuje username a heslo
+   [auth] authentikuje pristup na nas server, tedy urcuje username a heslo,
+          a urcuje consumer key pro pristup k LAB-API
       -user <username>     ... username
       -pass <heslo>        ... heslo
-      -authfile <filename> ... soubor se jmenem uzivatele a heslem,
+      -ck <consumer-key>   ... consumer key
+      -authfile <filename> ... soubor se jmenem uzivatele, heslem a ck
                                default je 'authfile.txt',
-                               pouzije se, jen pokud neni zadano -user a -pass                             
+                               pouzije se, jen pokud neni zadano -user a -pass
+                               a -ck                             
                              
 END_OF_USAGE
    }
@@ -90,6 +93,7 @@ END_OF_USAGE
                 'authfile=s'       => \$authfile,     
                 'user=s'           => \$user,
                 'pass=s'           => \$pass,
+                'ck=s'             => \$ck,          
                  
    ) or usage() and exit(1);
    usage() and exit(0) if $opt_help;
@@ -125,11 +129,12 @@ use base 'LWP::UserAgent';
  
 sub get_basic_credentials {
     my ($self, $realm, $url) = @_;
-    if ($user && $pass) {
+    if ($user && $pass && $ck) {
         return $user, $pass;
     } else {
         my $credentials = main::read_config ($authfile);
         if ($credentials->{'user'} && $credentials->{'pass'}) {
+           $ck = $credentials->{'ck'} unless $ck;
            return $credentials->{'user'}, $credentials->{'pass'};
         } else {
            die "The file $authfile does not contain 'user' and/or 'pass' properties\n."
@@ -149,6 +154,8 @@ my @found_series = ();   # newly found series
 my $tested_series = {};  # series already tested for existence in labgpx
 my $to_be_archived = {}; # series that remain in this hash should be archived
 
+my $labgpx_admin_url = 'https://labgpx.cz/Admin/lab.php';  
+
 # ----------------------------------------------------------------
 # Get all known series from our server (labgpx.cz/Admin)
 # where a basic authentication is needed
@@ -159,7 +166,7 @@ my $res;
 
 unless ($csv) {
    if ($opt_w) {
-      $res = $uaa->post ('https://labgpx.cz/Admin/lab.php', {f=>'getIdGcCoordList', format=>'json', sender=>'martin'}, $header);
+      $res = $uaa->post ($labgpx_admin_url, {f=>'getIdGcCoordList', format=>'json', sender=>'martin'}, $header);
    } else {   
       # trying to disable these warnings:
       #    Use of uninitialized value $v in concatenation (.) or string at C:/Strawberry/perl/vendor/lib/Net/HTTP/Methods.pm line 161 
@@ -170,7 +177,7 @@ unless ($csv) {
             warn $w;  
          } 
       };
-      $res = $uaa->post ('https://labgpx.cz/Admin/lab.php', {f=>'getIdGcCoordList', format=>'json', sender=>'martin'}, $header);
+      $res = $uaa->post ($labgpx_admin_url, {f=>'getIdGcCoordList', format=>'json', sender=>'martin'}, $header);
    }
 
    if ($res->is_success) {
@@ -203,7 +210,7 @@ unless ($csv) {
 # (a global variable used in subroutines)
 my $ua = LWP::UserAgent->new;
 $ua->agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36");
-$ua->default_header ('X-Consumer-Key' => "A01A9CA1-29E0-46BD-A270-9D894A527B91");
+$ua->default_header ('X-Consumer-Key' => $ck);
 
 # ----------------------------------------------------------------
 # Get all available series in the vicinity (from swagger))
@@ -406,7 +413,7 @@ sub process_new_ones {
    my $radiusMeters = $circle->{radiusKm} * 1000;
    my $lat = $circle->{start_lat};
    my $lon = $circle->{start_lon};
-   verbose ("Number of existing series in a circle ($lat, $lon, $radiusMeters): " . $data->{TotalCount} . "\n");
+   verbose ("Number of existing series in the circle ($lat, $lon, $radiusMeters): " . $data->{TotalCount} . "\n");
    
    foreach my $serie (@{$data->{Items}}) {
       my $serie_id = $serie->{Id};

@@ -2,7 +2,7 @@
 #
 # Author: martin.senger@gmail.com
 #
-# ABSTRACT: vytáhne popisné informace o LABkách daných sérií
+# ABSTRACT: vytáhne z LAB_API popisné informace o LABkách daných sérií
 # PODNAME: get-lab.pl
 #------------------------------------------
 
@@ -11,7 +11,7 @@ use warnings;
 use utf8;   
 use Text::Unidecode;
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.2';
 
 #------------------------------------------
 # Command-line arguments and script usage
@@ -30,7 +30,10 @@ Usage:
       [volby] mohou byt:
          -h  ...  vypise tento help text a skonci
          -v  ...  vypise verzi tohoto skriptu a skonci
-         -q  ...  nebude vypisovat informace o prubehu (quiet))      
+         -q  ...  nebude vypisovat informace o prubehu (quiet))    
+         
+      Pouziva soubor authfile.txt, ve kterem ocekava ck=<consumer-key>.
+        
 END_OF_USAGE
    }
 
@@ -62,15 +65,26 @@ if ($opt_v) {
 }
 
 use JSON;
+use File::Slurp qw(read_file);
 use LWP::UserAgent;
 use File::Path qw(make_path);
 use File::Spec;
 use Data::Dumper;
 use open OUT => ':utf8';
 
+# get a consumer key (needed for calls to LAB_API)
+my $ck;
+my $authfile = 'authfile.txt';   # TBD: this should be changable from the command line
+my $credentials = main::read_config ($authfile);
+if ($credentials->{'ck'}) {
+   $ck = $credentials->{'ck'};
+} else {
+   die "The file $authfile does not contain the 'ck' property\n."
+}
+
 my $ua = LWP::UserAgent->new;
 $ua->agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36");
-$ua->default_header ('X-Consumer-Key' => "A01A9CA1-29E0-46BD-A270-9D894A527B91");
+$ua->default_header ('X-Consumer-Key' => $ck);
 my $json = JSON->new->utf8->allow_nonref;
 
 # ----------------------------------------------------------------
@@ -223,6 +237,16 @@ sub findCountry {
    }
 }
 
+# ----------------------------------------------------------------
+# Read a simple config file made of key=value pairs.
+# Return a refernce to a hash with found pairs.
+# Only a LAB-API's consumer key (ck) os used.
+# ----------------------------------------------------------------
+sub read_config {
+   my $filename = shift;
+   my %result = read_file ($filename, err_mode => 'croak') =~ /^(\w+)=(.*)$/mg;
+   return \%result;
+}
 
 __END__
 
