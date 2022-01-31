@@ -23,7 +23,7 @@ Vytáhne z API data pro všechny labky dané série (otázky, obrázky a texty z
 Možné volby zobrazíte takto: perl get-lab.pl -help.
 Nespojuje se s labgpx.cz, takže nepotřebuje autorizační soubor authfile.txt.
 
-smart-to-labid.pl
+smart-to-labid.pl (nefunkční)
 =================
 
 Převede zadaný smart link na labid. Volby ukáže: perl smart-to-labid.pl -help.
