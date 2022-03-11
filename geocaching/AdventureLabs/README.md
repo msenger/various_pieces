@@ -23,15 +23,13 @@ Vytáhne z API data pro všechny labky dané série (otázky, obrázky a texty z
 Možné volby zobrazíte takto: perl get-lab.pl -help.
 Nespojuje se s labgpx.cz, takže nepotřebuje autorizační soubor authfile.txt.
 
-smart-to-labid.pl (nefunkční)
-=================
-
-Převede zadaný smart link na labid. Volby ukáže: perl smart-to-labid.pl -help.
 
 wrap-and-email.pl
 =================
 
-Takhle to funguje v crontabu:
+V tomto skriptu se musí opravit, jak se mají odesílat emaily. To, co tam je teď, funguje jen u mne, protože používám svého internet providera. Je třeba tedy opravit řádky pod "SMTP specifics". Bylo by hezké definici SMTP dát také do soubory authfile.txt, aler to zatím uděláno není. Mohu to dodělat, je-li o to zájem.
+
+Takhle se skripty na hledání nových sérii mohou volat v crontabu:
 
 15 6-23 * * * cd /home/senger/alabs ; perl find-new-labs.pl -nget -q 2>&1 | perl wrap-and-email.pl
 

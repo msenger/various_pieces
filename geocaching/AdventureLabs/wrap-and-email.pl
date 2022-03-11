@@ -25,6 +25,7 @@ my $smtp_port = 25;
 
 #     --- personal specifics
 my $to = 'martin.senger@gmail.com, jazzlinka@gmail.com, ami.ivo@gmail.com';
+#my $to = 'martin.senger@gmail.com';
 my $from = 'martin.senger@gmail.com';
 my $subject = 'AdventureLabs Notification ' . localtime();
 
