@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-our $VERSION = '4.3.0';
+our $VERSION = '4.4.0';
 
 #------------------------------------------
 # Command-line arguments and script usage
@@ -20,6 +20,7 @@ my ($czechia, $slovakia, $opt_w, $opt_n);
 my ($csv, $czfile);
 my ($user, $pass, $ck);
 my $authfile;  # default value 'authfile.txt'
+my $logfile;   # default value 'logging.conf'
 my $arch = 0;  # by default do not check whether series should be archived
 
 BEGIN {
@@ -52,6 +53,9 @@ Usage:
       -q[uiet]    ...  nebude vypisovat informace o prubehu (quiet)
       -w[arnings] ...  nezrusi warnings z volaneho modulu
       -n[get]     ...  nespusti na konci get-lab.pl
+      -logfile <filename>  ... soubor s konfiguraci, jak se bude logovat,
+                               default je soubor 'logging.conf', pouzije se,
+                               pokud neni zadan parameter -logfile
       
    [auth] authentikuje pristup na nas server, tedy urcuje username a heslo,
           a urcuje consumer key pro pristup k LAB-API
@@ -93,7 +97,9 @@ END_OF_USAGE
                 'authfile=s'       => \$authfile,     
                 'user=s'           => \$user,
                 'pass=s'           => \$pass,
-                'ck=s'             => \$ck,          
+                'ck=s'             => \$ck,
+
+		'logfile=s'        => \$logfile,
                  
    ) or usage() and exit(1);
    usage() and exit(0) if $opt_help;
@@ -102,13 +108,22 @@ END_OF_USAGE
    sub verbose { print STDOUT shift if $opt_vv}
 
    $authfile = 'authfile.txt' unless $authfile;
+   $logfile  = 'logging.conf' unless $logfile;
 
 }  # end of BEGIN
 
+# --- prepare logging ---
+#use Log::Log4perl qw(get_logger :levels);
+#Log::Log4perl->init (\$logfile);
+#my $logger = get_logger ('Find');  # singleton
+
+
+
 # -------------------- Show version and exit ----------------------
 if ($opt_v) {
-   print "$VERSION\n";
-   exit(0);
+#    logger->debug ('Ukazuji verzi');
+    print "$VERSION\n";
+    exit(0);
 }
 
 my $datestring = localtime();
