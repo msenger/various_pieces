@@ -19,22 +19,32 @@ my ($opt_lat, $opt_lon, $opt_rad);
 my ($czechia, $slovakia, $opt_w, $opt_n);
 my ($csv, $czfile);
 my ($user, $pass, $ck);
-my $authfile;    # default value 'authfile.txt'
-my $conflogfile; # default value 'logging.conf'
+my $authfile;  # default value 'authfile.txt'
+my $logfile;   # default value 'logging.conf'
 my $arch = 0;  # by default do not check whether series should be archived
-my $logger;
-my $cmdline;
 
 BEGIN {
 
    sub usage {
 	    print STDERR <<"END_OF_USAGE";
 Usage:
-   $0 [volby] [rozsah] [auth]
+   $0 [volby] [-lat <latitude> -lon <longitude> -rad <radius>] [auth]
+      hleda serie od stredu <latitude>,<longitude> v kruhu o polomeru <radius>,
+      souradnice jsou float number, radius je integer v kilometrech
+      
+   $0 [volby] [-cesko] | [-slovensko] [auth]
+      hleda serie jen v Cesku nebo jen na Slovensku (a v blizkem okoli))
 
-   $0 [volby] [rozsah] [auth] -csv
-      zapise na STDOUT labId, jmeno a uvodni souradnice kazde serie z daneho rozsahu
-      (jinak nedela nic jineho), z [auth] potrebuje jen consumer key
+   $0 [volby] [-czfile <filename>] [auth]
+      pri zadnem zadani se hleda v Cesku a Slovensku (a blizkem okoli),
+      je-li zadan soubor <filename>, pak se jeho obsahem prepisi interni
+      hodnoty definujici rozsahy pro Cesko
+
+   Ve vsech pripadech se vzdy ignoruji serie, ktere jiz jsou na nasem serveru.
+
+   $0 [volby] -csv
+      zapise na STDOUT id a uvodni souradnice kazde serie
+      (jinak nedela nic jineho)
    
    [volby] mohou byt:
       -h[elp]     ...  vypise tento help text a skonci
@@ -43,25 +53,9 @@ Usage:
       -q[uiet]    ...  nebude vypisovat informace o prubehu (quiet)
       -w[arnings] ...  nezrusi warnings z volaneho modulu
       -n[get]     ...  nespusti na konci get-lab.pl
-      -conflogfile <filename>  ... soubor s konfiguraci, jak se bude logovat,
-                                   default je soubor 'logging.conf', pouzije se,
-                                   jen pokud neni zadan parameter -conflogfile
-
-   [rozsah] urcuje oblast, ve ktere se serie hledaji, muze to byt:
-      [-lat <latitude> -lon <longitude> -rad <radius>]
-         hleda serie od stredu <latitude>,<longitude> v kruhu o polomeru <radius>,
-         souradnice jsou float number, radius je integer v kilometrech
-      
-      [-cesko] | [-slovensko]
-         hleda serie jen v Cesku nebo jen na Slovensku (a v blizkem okoli))
-
-      [-czfile <filename>]
-         pri zadnem zadani se hleda v Cesku a Slovensku (a blizkem okoli),
-         je-li zadan soubor <filename>, pak se jeho obsahem prepisi interni
-         hodnoty definujici rozsahy pro Cesko
-
-      Ve vsech pripadech (krome -csv) se ignoruji serie, ktere jiz jsou na nasem serveru.
-
+      -logfile <filename>  ... soubor s konfiguraci, jak se bude logovat,
+                               default je soubor 'logging.conf', pouzije se,
+                               pokud neni zadan parameter -logfile
       
    [auth] authentikuje pristup na nas server, tedy urcuje username a heslo,
           a urcuje consumer key pro pristup k LAB-API
@@ -83,9 +77,6 @@ END_OF_USAGE
    binmode(STDOUT, "encoding(UTF-8)");
    binmode(STDERR, "encoding(UTF-8)");
 
-   # command-line must be saved here, before calling Getopt::Long->GetOptions
-   $cmdline = join (" ", $0, @ARGV);
-   
    use Getopt::Long;
    Getopt::Long::Configure ('no_ignore_case');
    GetOptions ( help               => \$opt_help,
@@ -108,35 +99,34 @@ END_OF_USAGE
                 'pass=s'           => \$pass,
                 'ck=s'             => \$ck,
 
-		'conflogfile=s'    => \$conflogfile,
+		'logfile=s'        => \$logfile,
                  
    ) or usage() and exit(1);
    usage() and exit(0) if $opt_help;
 
-   sub qmsg    { my $mess = shift; $logger->info ($mess); print STDERR $mess unless $opt_q; }   
-   sub verbose { my $mess = shift; $logger->info ($mess); print STDOUT $mess if $opt_vv}
-   sub stdout  { my $mess = shift; $logger->info ($mess); print STDOUT $mess}
+   sub qmsg    { print STDERR shift unless $opt_q; }   
+   sub verbose { print STDOUT shift if $opt_vv}
 
    $authfile = 'authfile.txt' unless $authfile;
-   $conflogfile  = 'logging.conf' unless $conflogfile;
-   
+   $logfile  = 'logging.conf' unless $logfile;
+
 }  # end of BEGIN
+
+# --- prepare logging ---
+#use Log::Log4perl qw(get_logger :levels);
+#Log::Log4perl->init (\$logfile);
+#my $logger = get_logger ('Find');  # singleton
+
+
 
 # -------------------- Show version and exit ----------------------
 if ($opt_v) {
+#    logger->debug ('Ukazuji verzi');
     print "$VERSION\n";
     exit(0);
 }
 
-# -------------------- Prepare logging ---------------------------
-use Log::Log4perl qw(get_logger);
-Log::Log4perl->init ("$conflogfile");
-$logger = get_logger ();  # singleton
-
-# --- finally, let's start ---
 my $datestring = localtime();
-$logger->debug ("Starting (version used: $VERSION) -------------------------------------------");
-$logger->info  ("   with the command line: $cmdline");
 qmsg ($datestring . " - ") unless $csv;
       
 use JSON;
@@ -155,18 +145,14 @@ use base 'LWP::UserAgent';
 sub get_basic_credentials {
     my ($self, $realm, $url) = @_;
     if ($user && $pass && $ck) {
-	main::log_credentials ($user, $pass, $ck);
         return $user, $pass;
     } else {
         my $credentials = main::read_config ($authfile);
-	$credentials->{'user'} = $user if $user;
-	$credentials->{'pass'} = $pass if $pass;
         if ($credentials->{'user'} && $credentials->{'pass'}) {
            $ck = $credentials->{'ck'} unless $ck;
-	   main::log_credentials ($credentials->{'user'}, $credentials->{'pass'}, $ck);
            return $credentials->{'user'}, $credentials->{'pass'};
         } else {
-	   $logger->logdie ("Missing 'user' and/or 'pass' properties");
+           die "The file $authfile does not contain 'user' and/or 'pass' properties\n."
         }
     }
 }
@@ -187,48 +173,40 @@ my $labgpx_admin_url = 'https://labgpx.cz/Admin/lab.php';
 
 # ----------------------------------------------------------------
 # Get all known series from our server (labgpx.cz/Admin)
-# where a basic authentication is needed.
-# There is no need to contact labgpx.cz when only an csv is wanted.
+# where a basic authentication is needed
 # ----------------------------------------------------------------
-if ($csv) {
-    My::LWPClient->get_basic_credentials();  # this fills $ck, otherwise we do not need any credentials    
-} else {
-    my $uaa = My::LWPClient->new;
-    my $header = ['Content-Type' => 'multipart/form-data; charset=UTF-8'];
-    my $params = {f=>'getIdGcCoordList', format=>'json', sender=>'martin'};
-    my $res;
+my $uaa = My::LWPClient->new;
+my $header = ['Content-Type' => 'multipart/form-data; charset=UTF-8'];
+my $res;
 
-    $logger->debug ("Obtaining all series from $labgpx_admin_url." .
-		    " Header: " . nicedump ($header) .
-		    ", Params " . nicedump ($params));
-
-    if ($opt_w) {
-	$res = $uaa->post ($labgpx_admin_url, $params, $header);
-    } else {   
-	# trying to disable these warnings:
-	#    Use of uninitialized value $v in concatenation (.) or string at C:/Strawberry/perl/vendor/lib/Net/HTTP/Methods.pm line 161 
-	local $SIG{__WARN__} = sub {
-	    while (my $w = shift) {
-		next if $w =~ m{Use of uninitialized value \$v in concatenation};
-		# ...but keep other possible warnings enabled
-		$logger->logwarn ($w);  
-	    } 
-	};
-	$res = $uaa->post ($labgpx_admin_url, $params, $header);
-    }
+unless ($csv) {
+   if ($opt_w) {
+      $res = $uaa->post ($labgpx_admin_url, {f=>'getIdGcCoordList', format=>'json', sender=>'martin'}, $header);
+   } else {   
+      # trying to disable these warnings:
+      #    Use of uninitialized value $v in concatenation (.) or string at C:/Strawberry/perl/vendor/lib/Net/HTTP/Methods.pm line 161 
+      local $SIG{__WARN__} = sub {
+         while (my $w = shift) {
+            next if $w =~ m{Use of uninitialized value \$v in concatenation};
+            # ...but keep other possible warnings enabled
+            warn $w;  
+         } 
+      };
+      $res = $uaa->post ($labgpx_admin_url, {f=>'getIdGcCoordList', format=>'json', sender=>'martin'}, $header);
+   }
 
    if ($res->is_success) {
       # json: {"series":[{"gc":"GC8C6NH", "name":", "bArchiv":1...]}
       my $json = JSON->new->utf8->allow_nonref;
       my $data = $json->decode ($res->content);
-      qmsg ("Number of series obtained from $labgpx_admin_url: " . scalar @{$data->{series}} . "\n");
+      qmsg ("Number of series at labgpx.cz: " . scalar @{$data->{series}} . "\n");
       foreach my $serie (@{$data->{series}}) {
           if ($serie->{labId}) {
              $series_ids->{$serie->{labId}} = $serie->{bArchiv};   # 0 or 1
              if ($serie->{bArchiv} == 0) {
                 # interested only in non archived series at our server
                 if ($serie->{country} eq "Czechia" || $serie->{country} eq "Slovakia") { 
-                   #...AND only in Czech or Slovak series
+                   #...AND only Czech or Slovak series
                    $to_be_archived->{$serie->{labId}} = $serie->{name};
                 }
              }
@@ -237,7 +215,7 @@ if ($csv) {
           }  
       }
    } else {
-      $logger->logdie ("Unable to connect to $labgpx_admin_url: " . $res->status_line);
+      die "Unable to connect to our server: " . $res->status_line, "\n";
    }
 }
 
@@ -248,7 +226,6 @@ if ($csv) {
 my $ua = LWP::UserAgent->new;
 $ua->agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36");
 $ua->default_header ('X-Consumer-Key' => $ck);
-$logger->debug ("Agent used for swagger - headers: " . nicedump ($ua->{def_headers}));
 
 # ----------------------------------------------------------------
 # Get all available series in the vicinity (from swagger))
@@ -368,18 +345,13 @@ if ($czechia) {
 }
 #print Dumper ($circles);
 
-my $first_circle = 1;
 foreach my $circle (@{$circles}) {
    my $radiusMeters = $circle->{radiusKm} * 1000;
    my $lat = $circle->{start_lat};
    my $lon = $circle->{start_lon};
-
-   my $get = "https://labs-api.geocaching.com/Api/Adventures/SearchV3?radiusMeters=$radiusMeters&skip=$skippedLS&take=$maxLS&origin.latitude=$lat&origin.longitude=$lon";
-   if ($first_circle) {
-       $first_circle = 0;
-       $logger->debug ("Getting a circle from swagger: $get");
-   }
-   my $req = HTTP::Request->new (GET => $get);
+   
+   my $req = HTTP::Request->new(
+	    GET => "https://labs-api.geocaching.com/Api/Adventures/SearchV3?radiusMeters=$radiusMeters&skip=$skippedLS&take=$maxLS&origin.latitude=$lat&origin.longitude=$lon");
    my $res = $ua->request ($req);
  
    # Check the outcome of the response
@@ -392,7 +364,7 @@ foreach my $circle (@{$circles}) {
          process_new_ones ($circle, $json->decode ($res->content));
       }
    } else {
-      $logger->logdie ("Received an unexpected result from swagger: " . $res->status_line . "\n" . $res->content);
+      die "Received an unexpected result from swagger: " . $res->status_line . "\n" . $res->content;
    }
 }
 
@@ -403,13 +375,12 @@ foreach my $circle (@{$circles}) {
 # for CSV just report and exit
 if ($csv) {
    my $total_checked = keys %$tested_series;
-   qmsg ("Created $total_checked CSV values.\n");
-   exit (0);
+   qmsg ("Created file with $total_checked CSV values.\n");
+   exit;
 }
 
-# report any errors we collected
+# report any errors we collected  TBD
 foreach my $err (@{$errors}) {
-    $logger->error ($err);
     print STDERR "Error: $err\n";
 }   
 
@@ -419,7 +390,7 @@ if ($arch) {
     verbose ("Checking whether there are series to be archived\n");
     foreach my $key (keys %$to_be_archived) {
         my $serie_name = $to_be_archived->{$key};
-        stdout ("To be archived: [$key] [$serie_name]\n");
+        print STDOUT "To be archived: [$key] [$serie_name]\n";
     }
 }
 
@@ -437,7 +408,7 @@ if (@found_series > 0) {
       } 
       verbose "Subprocess: " . join (" ", @prog, @series) . "\n"; 
       system (@prog, @series) == 0
-         or $logger->logdie ("Calling a subprocess @prog @series failed: $?");
+         or die "Calling a subprocess @prog @series failed: $?";           
    }
 }
 
@@ -448,7 +419,7 @@ if (@found_series > 0) {
 #   - they may be archived at our server =>
 #     make a note that they should be DEarchivated
 # 
-# $data is a perl structures created from JSON sent from swagger for a given circle.
+# $data is a perl structures from json sent from swagger for a given circle.
 # $circle is the currently processed circle (used only in verbose messages)).
 # ----------------------------------------------------------------
 sub process_new_ones {
@@ -477,14 +448,14 @@ sub process_new_ones {
          # this serie exists at our server
          if (serieArchived ($serie_id) && $visibility == 2) {     # TBD: probably the visibility is always 2
             # this serie is marked as archived AND is is fully enabled in swagger => mark it for DEarchiving
-            stdout ("To be enabled: [$serie_id] [$serie_name]\n");
+            print STDOUT "To be enabled: [$serie_id] [$serie_name]\n";
          } else {
             next; # go for the next serie 
          }
       } else {
          # okay, we found a new serie
          my $countryCode = findCountry ($serie->{Location}->{Latitude}, $serie->{Location}->{Longitude});
-         stdout ("New: [$countryCode] [$serie_id] [$serie_name] [" . $serie->{Location}->{Latitude} . "," . $serie->{Location}->{Longitude} . "]\n");
+         print STDOUT "New: [$countryCode] [$serie_id] [$serie_name] [" . $serie->{Location}->{Latitude} . "," . $serie->{Location}->{Longitude} . "]\n";
          push (@found_series, {
             country => $countryCode,
             title   => $serie->{Title},
@@ -552,7 +523,6 @@ sub add_to_csv {
    # check which series are wanted to put in the CSV file
    foreach my $serie (@{$data->{Items}}) {
       my $serie_id = $serie->{Id};
-      my $serie_name = $serie->{Title};
       my $lat = $serie->{Location}->{Latitude};
       my $lon = $serie->{Location}->{Longitude};
 
@@ -562,7 +532,7 @@ sub add_to_csv {
       next if $serie->{IsArchived};            # ignore archived series (usually false, anyway)
 
       # okay, we found a wanted serie
-      print STDOUT "$serie_id ($serie_name)\t$lat\t$lon\n";
+      print STDOUT "$serie_id\t$lat\t$lon\n";
    }
 }
 
@@ -582,10 +552,9 @@ sub add_to_csv {
 sub csvfile2perl {
    my $file = shift;
    my $result = [];
-   $logger->debug ("Converting the file '$file' with circles into perl");
 
    my $csv = Text::CSV->new({ sep_char => "\t" });
-   open (my $data, '<', $file) or $logger->logdie ("Could not open '$file' $!\n");
+   open (my $data, '<', $file) or die "Could not open '$file' $!\n";
    my $header = <$data>;   # ignore the first line
    while (my $line = <$data>) {
       chomp $line;
@@ -598,7 +567,7 @@ sub csvfile2perl {
               'start_lon' => $fields[1],
               'radiusKm'  => $fields[3]} );
       } else {
-         $logger->logwarn ("Line could not be parsed: $line\n");
+         warn "Line could not be parsed: $line\n";
       }
    }
    return $result;   
@@ -606,40 +575,12 @@ sub csvfile2perl {
 
 # ----------------------------------------------------------------
 # Read a simple config file made of key=value pairs.
-# Return a reference to a hash with found pairs.
+# Return a refernce to a hash with found pairs.
 # ----------------------------------------------------------------
 sub read_config {
-    my $filename = shift;
-    my %result = read_file ($filename, err_mode => 'croak') =~ /^(\w+)=(.*)$/mg;
-    return \%result;
-}
-
-
-# ----------------------------------------------------------------
-# Log given credentials (if needed).
-# Parameters are user, pass and ck.
-# ----------------------------------------------------------------
-sub log_credentials {
-    if ($logger->is_debug()) {
-	my $u = shift;  # user name
-	my $p = shift;  # password
-	my $c = shift;  # consumer key
-	$logger->debug ("Using user: $u");
-	$logger->debug ("Using pass: $p");
-	$logger->debug ("Using ck:   $c");
-    }
-}
-
-# ----------------------------------------------------------------
-# Return a bit more nicer form of a perl structured data
-# (used mainly for logging, therefore the result is a one-liner)
-# ----------------------------------------------------------------
-sub nicedump {
-    my $data = shift;
-    my $d = Data::Dumper->new ([$data]);
-    $d->Indent (0);
-    $d->Terse (1);
-    return $d->Dump;
+   my $filename = shift;
+   my %result = read_file ($filename, err_mode => 'croak') =~ /^(\w+)=(.*)$/mg;
+   return \%result;
 }
 
 __END__   
