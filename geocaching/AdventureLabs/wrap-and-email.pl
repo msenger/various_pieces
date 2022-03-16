@@ -76,8 +76,7 @@ END_OF_USAGE
   
   #     --- personal specifics
   $from = 'martin.senger@gmail.com' unless $from;
-  #$to_normal = 'martin.senger@gmail.com, Kocmanek@kvados.cz, jazzlinka@gmail.com, ami.ivo@gmail.com' unless $to_normal;
-  $to_normal = 'martin.senger@gmail.com' unless $to_normal;
+  $to_normal = 'martin.senger@gmail.com, Kocmanek@kvados.cz, jazzlinka@gmail.com, ami.ivo@gmail.com' unless $to_normal;
   $to_admin = 'martin.senger@gmail.com, Kocmanek@kvados.cz' unless $to_admin; 
 
 }  # end of BEGIN
