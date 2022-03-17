@@ -1,0 +1,125 @@
+Poznámky o skriptech (doplňováno nepravidelně)
+=====================================================
+
+2022-03-11 (odesláno emailem)
+==========
+
+Jak používat Martinovy Perl skripty k zjišťování nových LAB sérií: V zásadě je třeba mít instalován Perl a git.
+
+Jak na instalaci Perlu
+======================
+
+Mají-li se skripty spouštět v Linuxu, Perl tam už budeš (skoro určitě) mít nainstalován. Ale nebudeš mít všechny potřebné Perl moduly. Pod windows (dělal jsem to pro Windows 11, ale bude to totéž i pro windows 10, myslím) doporučuji nainstalovat Strawberry Perl: https://strawberryperl.com/. Kupodivu v tomto Perlu byly i všechny potřebné moduly.
+
+Vše se dělá z příkazové řádky. Pod windows je taková příkazová řádka součástí už součástí instalace Strawberry Perl (aplikace má iconku ze čtyř červených teček). Pod linuxem se otevře běžné terminálové okno.
+
+Na instalaci potřebných Perl modulů (ať už pod Linuxem nebo pod windows) doporučuji program cpanm (je v modulu App::cpanminus). Takto se instaluje:
+
+Pod linuxem: sudo perl App::cpanminus
+Pod windows: perl App::cpanminus
+
+Vyzkoušet, zda se dobře nainstaloval třeba takto:
+
+Pod linuxem: which cpanm
+Pod obojím: cpanm -h
+
+Po spuštění skriptu (viz níže, jak se spouští a které skripty jsou k dispozici) se chybějící modul ohlásí něčím takovým:
+
+Can't locate Blbej/Modul.pm in @INC...
+
+V takovém případě se module nainstaluje:
+
+Pod linuxem: sudo cpanm Blbej::Modul
+Pod windows: cpanm Blbej::Modul
+
+Jak na instalaci gitu
+=====================
+
+git je program, kterým si přetáhneš z repository na github.com mé skripty k sobě na počítač.
+
+Pod linuxem tam buď už git máš (spíše ale nemáš, třeba v Ubuntu se automaticky neinstaluje, myslím) nebo použij nějaký instalovaný package manager.
+
+Pod windows pomohou tyto odkazy (instalace git and git-bash terminal):
+https://www.makeuseof.com/install-git-git-bash-windows/
+https://git-scm.com/download/win
+
+Pod linuxem i windows je to pak už stejné:
+Vytvoř si adresář, kam chceš sktipty uložit (např. Development) a skoč do něj (pod windows použij instalovaný git bash window):
+cd /c/Development
+git clone https://github.com/msenger/various_pieces.git
+
+a pak jdi do various_pieces/geocaching/AdventureLabs
+
+Měl bys tam mít něco takového (právě staženého z github.com):
+
+ Directory of C:\Development\newprojects\various_pieces\geocaching\AdventureLabs
+
+11.03.2022  17:18    <DIR>          .
+11.03.2022  17:18    <DIR>          ..
+11.03.2022  17:58            21 691 find-new-labs.pl
+31.01.2022  22:38            12 872 get-lab.pl
+09.12.2020  15:12               104 kruhy verze 1.csv
+29.08.2020  13:40               225 kruhy verze 2.csv
+28.10.2020  19:41               299 kruhy verze 3 (hodně Chemnitz a okolí).csv
+29.10.2020  13:27               688 kruhy verze 4.csv
+15.03.2020  19:19               183 kruhy.sk.csv
+31.01.2022  23:08             1 647 README.md
+31.01.2022  21:44               224 template.authfile.txt
+09.03.2020  13:37             2 433 test-geonames.pl
+06.03.2022  12:17             1 184 wrap-and-email.pl
+
+Zkus tam třeba zavolat: git status. Napíše ti to, že máš vše.
+
+Pak si ručně udělej tyhle dvě věci:
+
+1. V adresáři C:\Development\newprojects\various_pieces (nebo s normálními lomítky) by měl být soubor ".ignore" s obsahem:
+
+geocaching/AdventureLabs/authfile.txt
+*~
+
+Pokud by tam nebyl, něco je špatně (snad ne), tak takový soubor se zmíněným obsahem vytvoř.
+
+2. V adresáři, kde budeš skripty spouštět (tj. v C:\Development\newprojects\various_pieces\geocaching\AdventureLabs) musíš duplikovat soubor template.authfile.txt a přejmenovat vytvořenou kopii na "authfile.txt". Do něho napíšeš své jméno a heslo na přístup k admin stránkám labgpx.cz, a také X-Consumer... Tento soubor je jen na tvém počítači a právě jeho jméno v souboru ".gitignore" zajistí, že si ho git nebude všímat.
+
+A to je vše. Zkus si přečíst README.md, kde jsou jména těch skritpů a jak se spouští. A ještě tam je o SMTP serveru, který bude také třeba mít u tebe jiný, než mám já.
+
+Zkut třeba tohle:
+
+perl find-new-labs.pl -verb
+perl get-lab.pl a101728c-8163-46d9-8eb4-d531252653d2
+
+2022-03-13
+==========
+
+logování
+Přidal jsem do skriptu find-new-labs.pl hodně logování. Co a kam se loguje (konfigurace logování) je v souboru logging.conf. Vyhovuje to běžným účelům, proto je tento konfigurační soubor součástí gitu. Chceš-li mít konfiguraci v jiném souboru, přidal jsem na command line parameter -conflogfile <filename>. Pokud to v konfiguračním souboru nezměníš (asi není důvod), logování se děje do souboru reports.log. Tento defaultní logovací soubor jsem přidal do .gitignore, protože ten do gitu rozhodně nepatří. I proto, že v logách se objevuje i username a password pro přístup na labgpx.cz (tak, jak se přečte buď v authfile.txt nebo z command line z parametrů -user a-nebo -pass). Dost jsem přemýšlel, zda tohle není security risk, ale nakonec jsem usoudil, že není. Pokud ti to připadá jinak, dej vědět. Možnost by třeba bylo logovat password jako hvězdičky nebo hash-funkci. Ale to by ti nepomohlo najít, kde máš u sebe problém s authentikací (jaks o tom psal).
+
+oprava authentikace
+Prošel jsem znovu (ale ještě ne všechno otestoval), jak se provádí authentikace na přístup na labgpx.cz. Opravil jsem to tak, že nejdříve se vezmou údaje z authfile.txt, jsou-li tam, a ty se případně přepíší z parametrů -pass a-nebo -user z command line. Obdobně i pro consumer ley.
+
+oprava chyby při vytváření csv výstupu
+Parametr -csv se kdysi zavedl kvůli globálním opravám na labgpx.cz a po prvním použití se už nepoužíval. Proto jsem si dříve ani nevšiml, že je v něm chyba (chyběl mu consumer key). To jsem tedy opravil. Konečně třeba se to na něco dá použít i teď, můžeš to zkusit, co z toho vylézá. Takto se to volá: perl find-new-labs.pl -lat 50 -lon 14 -rad 10 -csv
+
+změna, aby se všem posílal jen email s dobrým výsledkem a adminovi jen ten, co obsahuje chybu
+Tohle jsem ještě neudělal. Ale počítám, že to dodělám ještě dnes. Díky za připomínky, jak se s tím pipelinem vypořádat.
+
+Takže, co musíte udělat, chcete-li nové verze:
+git pull
+instalovat modul Log::Log4perl (možná už ve strawberry perlu je defaultně): cpanm Log::Log4perl
+instalovat modul Log::Dispatch (ten ve strawberry není): cpanm Log::Dispatch
+
+2022-03-16
+==========
+
+Rozdělil jsem emajlování streamů STDOUT a STDERR čistě prostředky bashe (pod linuxem) a command line cmd (pod Windows). Pod linuxem (kde to asi má Honza) by to mělo fungovat tímhle:
+
+export ERR_TMP=err.tmp ; perl find-new-labs.pl -nget -q 2> $ERR_TMP | perl wrap-and-email.pl ; perl wrap-and-email.pl -admin < $ERR_TMP
+
+Pod Windows jsem připojit jednoduchý notify.bat (který dělá totéž):
+
+@ECHO OFF
+set MY_ERR=err.tmp
+set MY_STD=std.tmp
+perl find-new-labs.pl -nget -q 2> "%MY_ERR%" 1> "%MY_STD%"
+perl wrap-and-email.pl < "%MY_STD%"
+perl wrap-and-email.pl -admin < "%MY_ERR%"
