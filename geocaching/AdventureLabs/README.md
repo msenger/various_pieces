@@ -14,28 +14,25 @@ find-new-labs.pl
 
 Najde nové série labek v daném okolí, vypíše jejich labid, případně i spustí pro každou z nich další skript get-lab.pl. Parametry pro spuštění se zobrazí takto: perl find-new-labs.pl -help.
 
-Tento skript pracuje s daty ze serveru labgpx.cz, ke kterému musíte mít přístup (username a heslo). Tento přístup se dá zadat na příkazové řádce, ale lepší bude uložit username a heslo do souboru authfile.txt (jehož vzorem je template.authfile.txt).
+Tento skript pracuje s daty ze serveru labgpx.cz, ke kterému musíte mít přístup (username a heslo). Tento přístup se dá zadat na příkazové řádce, ale lepší bude uložit username a heslo do souboru authfile.txt (jehož vzorem je template.authfile.txt, kde je vidět i další vyžadovaný údaj, consumer key).
 
 get-lab.pl
 ==========
 
-Vytáhne z API data pro všechny labky dané série (otázky, obrázky a texty z denníčků).
+Vytáhne z LAB-API data pro všechny labky dané série (otázky, obrázky a texty z denníčků).
 Možné volby zobrazíte takto: perl get-lab.pl -help.
-Nespojuje se s labgpx.cz, takže nepotřebuje autorizační soubor authfile.txt.
-
+Nespojuje se s labgpx.cz, takže nepotřebuje autorizační soubor authfile.txt. Ale potřebuje údaj consumer key, a ten se bere z příkazové řádky nebo také ze souboru authfile.txt.
 
 wrap-and-email.pl
 =================
 
-To be done better and later:
-V tomto skriptu se musí opravit, jak se mají odesílat emaily. To, co tam je teď, funguje jen u mne, protože používám svého internet providera. Je třeba tedy opravit řádky pod "SMTP specifics". Bylo by hezké definici SMTP dát také do soubory authfile.txt, aler to zatím uděláno není. Mohu to dodělat, je-li o to zájem.
+Používá se k odeslání toho, co zjistí hledač nových sérií (skript find-mew-labs.pl). Emaily se po každém ukončení hledače posílají buď všem, kdo pak nově nalezené série publikuje, nebo adminovi, objevila-li se nějaká chyba (tento druhý případ se indikuje parametrem "-admin". Adresáty emilů i SMTP podrobnosti se dají skriptu zadat parametry pčíkazové řádky. Možné volby se zobrazí takto: perl wrap-and-email.pl -help.
 
+Co zadat crontabu (k pravidelnému opakování hledání nových sérií)
+=================================================================
 
 Under Windows: notify.bat
-Under Linux:   export ERR_TMP=err.tmp ; perl find-new-labs.pl -nget -verb 2> $ERR_TMP | perl wrap-and-email.pl ; perl wrap-and-email.pl -admin -toadmin "m^Ctin.senger@gmail.com" < $ERR_TMP
-
-###Takhle se skripty na hledání nových sérii mohou volat v crontabu: TBD
-###15 6-23 * * * cd /home/senger/alabs ; perl find-new-labs.pl -nget -q 2>&1 | perl wrap-and-email.pl
+Under Linux:   export ERR_TMP=err.tmp ; perl find-new-labs.pl -nget -q 2> $ERR_TMP | perl wrap-and-email.pl ; perl wrap-and-email.pl -admin < $ERR_TMP
 
 
 
