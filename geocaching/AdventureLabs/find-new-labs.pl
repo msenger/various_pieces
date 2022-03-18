@@ -6,6 +6,7 @@
 #           našem serveru
 # PODNAME: find-new-labs.pl
 # ----------------------------------------------------------------
+use utf8;
 use strict;
 use warnings;
 
