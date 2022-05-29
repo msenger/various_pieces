@@ -116,22 +116,27 @@ foreach my $serieId (@{$serieIds}) {
    $name =~ s{\.\.}{}g;           # more dots make a wrong file name (on windows)
    $name =~ s{[\. ]+$}{};         # do not end a directory name with a space or a period
    $name =~ s{\"}{_}g;            # double-quotes harm the directory name
-   qmsg " [$name] ";
-   unless (-d $name) {
-      die " Cannot make a directory '$name': [$!]" unless make_path ($name);
+
+   my $labid = $data->{Id};
+   my $country = findCountry ($data->{Location}->{Latitude}, $data->{Location}->{Longitude});
+   my $dirName = "${name}__${labid}__${country}";
+   
+   qmsg " [$dirName] ";
+   unless (-d $dirName) {
+      die " Cannot make a directory '$dirName': [$!]" unless make_path ($dirName);
    }
 
    # write general info about the whole serie into a file
-   my $serieOutput = "ID:          " . $data->{Id} . "\n";
+   my $serieOutput = "ID:          $labid\n";
    $serieOutput   .= "Jméno série: $name\n";
    $serieOutput   .= "Owner:       " . $data->{OwnerUsername} . "\n";
-   $serieOutput   .= "Kód země:    " . findCountry ($data->{Location}->{Latitude}, $data->{Location}->{Longitude}) . "\n";
+   $serieOutput   .= "Kód země:    $country\n";
    $serieOutput   .= "Souřadnice:  " . $data->{Location}->{Latitude} . "," . $data->{Location}->{Longitude} . "\n";
    $serieOutput   .= "Smart link:  https://labs.geocaching.com/goto/" . $smartLink . "\n" if $smartLink;  
    $serieOutput   .= "Lineární:    " . ($data->{IsLinear} ? "ano" : "ne") . "\n";
    $serieOutput   .= "\n$serDesc\n";
    
-   my $outfile = File::Spec->catfile ($name, "0 - Serie.txt");
+   my $outfile = File::Spec->catfile ($dirName, "0 - Serie.txt");
    open(FH, '>', $outfile) or die " Cannot write to $outfile: " . $! . "\n";
    print FH "$serieOutput\n";
    close FH;
@@ -152,14 +157,14 @@ foreach my $serieId (@{$serieIds}) {
       }
       my $labOutput = "[ " . $lab->{Title} . " ]\n$labDesc\n[[ Otazka: ]] $labQuest\n[[ Journal: ]] $labAward\n";
 
-      my $outfile = File::Spec->catfile ($name, "$labCount - Popis.txt");
+      my $outfile = File::Spec->catfile ($dirName, "$labCount - Popis.txt");
       open(FH, '>', $outfile) or die " Cannot write to $outfile: " . $! . "\n";
       print FH "$labOutput\n";
       close FH;
          
       # extract images and fetch their image data and store it locally
-      extractImage ($labCount, $lab->{KeyImageUrl}, $name, "${labCount}a - IntroImage.jpg");
-      extractImage ($labCount, $lab->{AwardImageUrl}, $name, "${labCount}b - JournalImage.jpg");
+      extractImage ($labCount, $lab->{KeyImageUrl}, $dirName, "${labCount}a - IntroImage.jpg");
+      extractImage ($labCount, $lab->{AwardImageUrl}, $dirName, "${labCount}b - JournalImage.jpg");
    }
 
    qmsgNL ("Done.")
@@ -184,8 +189,9 @@ sub fetchSwaggerData {
 }
       
 # ----------------------------------------------------------------
-# Extract an image from the given $url (counted by $labCount and
-# store it in a file given by $name. Return true by success.
+# Extract an image from the given $url (counted by $labCount] and
+# store it in a file given by $name in directory $dirName.
+# Return true by success.
 # ----------------------------------------------------------------
 sub extractImage {
    my ($labCount, $url, $dirName, $name) = @_;
