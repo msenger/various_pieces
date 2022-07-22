@@ -11,7 +11,37 @@ use warnings;
 use utf8;   
 use Text::Unidecode;
 
-our $VERSION = '1.1.2';
+our $VERSION = '1.2.2';
+
+# 2022/07/22 - added to serie summary:
+#  "FirebaseDynamicLink": "https://adventurelab.page.link/QUas",
+
+# 2022/07/22 - added to the individual labs:
+#  "MultiChoiceOptions": [
+#        {
+#          "Text": "poplatek za přepřažení koně",
+#          "Order": 0
+#        },
+#        {
+#          "Text": "právo první noci",
+#          "Order": 1
+#        },
+#        {
+#          "Text": "celní poplatek",
+#          "Order": 2
+#        },
+#        {
+#          "Text": "poplatek za ustájení koně",
+#          "Order": 3
+#        }
+#      ],
+#
+# 2022/07/22 - added to the individual labs:
+#      "Location": {
+#        "Latitude": 49.1768666666667,
+#        "Longitude": 16.6230833333333,
+#        "Altitude": null
+#      },
 
 #------------------------------------------
 # Command-line arguments and script usage
@@ -103,10 +133,12 @@ foreach my $serieId (@{$serieIds}) {
    # get and process basic data about the given serie
    my $basicInfo = fetchSwaggerData ("https://labs-api.geocaching.com/Api/Adventures/GetAdventureBasicInfo?id=$serieId");
    my $smartLink = $basicInfo->{SmartLink};
+   my $firebaseDynamicLink = $basicInfo->{FirebaseDynamicLink};
    my $serDesc = $basicInfo->{Description};   $serDesc =~ s{\r\n}{\n}g; $serDesc =~ s{\s*$}{};
    
    # get and process individual LABs data
    my $data = fetchSwaggerData ("https://labs-api.geocaching.com/api/Adventures/$serieId");
+#   print Dumper ($data);
 
    # make a directory according the series name
    my $name = unidecode ($data->{Title});   
@@ -127,13 +159,14 @@ foreach my $serieId (@{$serieIds}) {
    }
 
    # write general info about the whole serie into a file
-   my $serieOutput = "ID:          $labid\n";
-   $serieOutput   .= "Jméno série: $name\n";
-   $serieOutput   .= "Owner:       " . $data->{OwnerUsername} . "\n";
-   $serieOutput   .= "Kód země:    $country\n";
-   $serieOutput   .= "Souřadnice:  " . $data->{Location}->{Latitude} . "," . $data->{Location}->{Longitude} . "\n";
-   $serieOutput   .= "Smart link:  https://labs.geocaching.com/goto/" . $smartLink . "\n" if $smartLink;  
-   $serieOutput   .= "Lineární:    " . ($data->{IsLinear} ? "ano" : "ne") . "\n";
+   my $serieOutput = "ID:           $labid\n";
+   $serieOutput   .= "Jméno série:  $name\n";
+   $serieOutput   .= "Owner:        " . $data->{OwnerUsername} . "\n";
+   $serieOutput   .= "Kód země:     $country\n";
+   $serieOutput   .= "Souřadnice:   " . $data->{Location}->{Latitude} . "," . $data->{Location}->{Longitude} . "\n";
+   $serieOutput   .= "Smart link:   https://labs.geocaching.com/goto/" . $smartLink . "\n" if $smartLink;  
+   $serieOutput   .= "Dynamic link: " . $firebaseDynamicLink . "\n" if $firebaseDynamicLink;  
+   $serieOutput   .= "Lineární:     " . ($data->{IsLinear} ? "ano" : "ne") . "\n";
    $serieOutput   .= "\n$serDesc\n";
    
    my $outfile = File::Spec->catfile ($dirName, "0 - Serie.txt");
@@ -150,12 +183,28 @@ foreach my $serieId (@{$serieIds}) {
       # extract various text information and write it into a file
       my $labName = $lab->{Title};
       my $labDesc = $lab->{Description};    $labDesc =~ s{\r\n}{\n}g; $labDesc =~ s{\s*$}{};
+      my $labCoords = $lab->{Location}->{Latitude} . "," . $lab->{Location}->{Longitude};
       my $labQuest = $lab->{Question}; 
+      my $labMultiQuest = '';
+      if ($lab->{MultiChoiceOptions}) {
+           my $answerChoices = {};  
+           foreach my $choice (@{$lab->{MultiChoiceOptions}}) {
+              my $order = $choice->{Order};
+              my $text  = $choice->{Text};
+              $answerChoices -> {$order} = $text;
+           }
+           if ($answerChoices) {
+              foreach my $choice (sort (keys %$answerChoices)) {
+                 $labMultiQuest .= "   " . $choice . ": " . $answerChoices -> {$choice} . "\n"; 
+              }
+           }
+      }
       my $labAward = '';
       if ($lab->{CompletionAwardMessage}) {
            $labAward = $lab->{CompletionAwardMessage};
       }
-      my $labOutput = "[ " . $lab->{Title} . " ]\n$labDesc\n[[ Otazka: ]] $labQuest\n[[ Journal: ]] $labAward\n";
+
+      my $labOutput = "[ " . $lab->{Title} . " ]\n$labDesc\n[[ Souradnice: ]] $labCoords\n[[ Otazka: ]] $labQuest\n${labMultiQuest}[[ Journal: ]] $labAward\n";
 
       my $outfile = File::Spec->catfile ($dirName, "$labCount - Popis.txt");
       open(FH, '>', $outfile) or die " Cannot write to $outfile: " . $! . "\n";
@@ -246,7 +295,7 @@ sub findCountry {
 # ----------------------------------------------------------------
 # Read a simple config file made of key=value pairs.
 # Return a refernce to a hash with found pairs.
-# Only a LAB-API's consumer key (ck) os used.
+# Only a LAB-API's consumer key (ck) is used.
 # ----------------------------------------------------------------
 sub read_config {
    my $filename = shift;
@@ -255,117 +304,3 @@ sub read_config {
 }
 
 __END__
-
-         if ($lab->{AwardImageUrl}) {
-            my $awardUrl = $lab->{AwardImageUrl};
-            $req = HTTP::Request->new (GET => "$awardUrl");
-            my $res2 = $ua->request ($req);
-
-            #Check the outcome of the response
-            if ($res2->is_success) {
-               $outfile = File::Spec->catfile ($name, "${labCount}b - JournalImage.jpg");
-
-               open(FH, '>', $outfile) or die " Cannot write to $outfile: " . $! . "\n";
-               binmode FH;
-               print FH $res2->content;
-               close FH;
-            }   
-         }
-
-# ----------------------------------------------------------------
-# Report results to STDOUT and STDERR
-# ----------------------------------------------------------------
-
-# report any errors we collected  TBD
-foreach my $err (@{$errors}) {
-    print STDERR "Error: $err\n";
-}   
-
-# report some statistics
-my $total_checked = keys %$tested_series;
-print STDOUT "$total_checked series checked\n";
-
-# report newly found series
-foreach my $serie (@found_series) {
-   print STDOUT "New: [" . $serie->{id} . "] [" . $serie->{title} . "] [" . $serie->{lat} . "," . $serie->{lon} . "]\n";
-}
-
-# ----------------------------------------------------------------
-# Compare with our server and add new ones to global variable
-# @found_series and $tested_series; errors to @errors
-#
-# Input is a perl structures from json sent from swager for
-# a given circle.
-# ----------------------------------------------------------------
-sub add_new_ones {
-   my $data = shift;
-   print "Number of active series in a circle: " . $data->{TotalCount} . "\n";
-   
-   # check which series are new
-   foreach my $serie (@{$data->{Items}}) {
-      my $serie_id = $serie->{Id};
-      my $serie_name = $serie->{Title};
-
-      next if ($tested_series->{$serie_id});   # ignore series that were already tested
-      $tested_series->{$serie_id} = 1;         # and remember this serie
-    
-      next if $serie->{IsTest};
-      next if $serie->{IsArchived};
-      next if serieFound ($serie_id, $serie_name);
-         print STDOUT "Possibly new: [$serie_id] [$serie_name] [" . $serie->{Location}->{Latitude} . "," . $serie->{Location}->{Longitude} . "]\n";
-      next unless isInCzechia ($serie->{Location}->{Latitude}, $serie->{Location}->{Longitude});
-
-      # okay, we found a new serie
-      push (@found_series, {
-         title => $serie->{Title},
-         lat   => $serie->{Location}->{Latitude},
-         lon   => $serie->{Location}->{Longitude},
-         id    => $serie->{Id},
-         link  => $serie->{SmartLink},
-         count => $serie->{StagesTotalCount}
-      });      
-   }
-}
-
-# ----------------------------------------------------------------
-# Return true if the given serie was found at our server
-# ----------------------------------------------------------------
-sub serieFound {
-   my $id = shift;
-   my $name = shift;
-
-   # first try to find by an ID
-   if (exists $series_ids->{$id}) {
-       return 1;
-   }
-   # second try to find by a name
-   if (exists $series_names->{$name}) {
-       return 1;
-   }
-   return 0;   
-}
-
-# ----------------------------------------------------------------
-# Return true if given coordinates are located in Czechia
-# ----------------------------------------------------------------
-sub isInCzechia {
-   my ($lat, $lon) = @_;
-   
-   $lat = sprintf ("%f", $lat);  # to get rid of the scientific notation
-   $lon = sprintf ("%f", $lon);
-
-   my $geonames_url = "http://www.geonames.org/findNearbyPlaceName?lat=$lat&lng=$lon";
-   my $res = $ua->get ($geonames_url);
-   if ($res->is_success) {
-      # got a response from geonames      
-      my $response = $res->content;
-      return ($response =~ m{<countryCode>CZ</countryCode>});
-   } else {
-      # request failed
-      push (@$errors, "[$lat, $lon] ". $res->status_line);
-      return 0;
-   }
-}
-
-__END__   
-
