@@ -1,0 +1,12 @@
+cd c
+cd Download/tmp2/
+find -type f -name "*.gpx" | perl -e "while(<>) { print m{\.([a-z0-9\-]+)\.} ; print ' ' }" > a.txt
+
+---
+List --> Export --> 'LABid - mainly only LABids as CSV' --> labid.csv
+cd c
+cd Dropbox/GeoGet/data
+cut -f4 labid.csv | sort | uniq | tr '\n' ' '
+
+---
+
