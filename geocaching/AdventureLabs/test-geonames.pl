@@ -9,17 +9,48 @@ use Data::Dumper;
 my $ua = LWP::UserAgent->new;
 $ua->agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36");
 
-$ua->add_handler( request_prepare => \&request_prepare, 'm_scheme' => 'http');
+#$ua->add_handler( request_prepare => \&request_prepare, 'm_scheme' => 'http');
 
-my $lat = '49.7051666666667';
-my $lon = '17.0759666666667';
-my $result = isInCzechia ($lat, $lon);
-print "RET: [$result]\n";
+#my $lat = '49.7051666666667';
+#my $lon = '17.0759666666667';
+
+my $lat = '49.90135';
+my $lon = '13.5351166666667';
+
+my $country = findCountry ($lat, $lon);
+print "COUNTRY ($lat, $lon): [$country]\n";
 
 sub request_prepare {
    my ($request, $ua, $handler) = @_;
    print Dumper ($request);
 }
+
+# ----------------------------------------------------------------
+# Return a country code where the given coordinates belong to
+# or '??' if not found or failed
+# ----------------------------------------------------------------
+sub findCountry {
+   my ($lat, $lon) = @_;
+   
+   $lat = sprintf ("%f", $lat);  # to get rid of the scientific notation
+   $lon = sprintf ("%f", $lon);
+
+   my $geonames_url = "http://www.geonames.org/findNearbyPlaceName?lat=$lat&lng=$lon";
+   my $res = $ua->get ($geonames_url);
+   if ($res->is_success) {
+      # got a response from geonames      
+      my $response = $res->content;
+      $response =~ m{<countryCode>(\w{2})</countryCode>};
+      print "Response successful: " . Dumper ($res);
+      return ($1 or '??');
+   } else {
+      # request failed
+      print "Request failed: " . Dumper ($res);
+      return '??';
+   }
+}
+
+__END__
 
 # ----------------------------------------------------------------
 # Return true if given coordinates are located in Czechia
@@ -51,6 +82,7 @@ sub isInCzechia {
    } else {
       # request failed
       #push (@$errors, "[$lat, $lon] ". $res->status_line);
+      print "[$lat, $lon] ". $res->status_line;
       return 0;
    }
 }

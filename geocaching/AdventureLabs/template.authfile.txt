@@ -1,7 +1,8 @@
 # soubor obsahující v plain textu jméno a heslo k přístupu na labgpx.cz;
-# a consumer key pro spojení s LAB-API;
+# a consumer key pro spojení s LAB-API; a api key ke geodecoderu
 # z tohoto vzoru si vytvor soubor authfile.txt se svym jmenem a heslem
 #
 user=***
 pass=***
 ck=***
+api=***

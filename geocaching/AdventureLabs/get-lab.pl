@@ -11,8 +11,11 @@ use warnings;
 use utf8;   
 use Text::Unidecode;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.2.3';
 
+# 2022/12/09 - corrected how to obtain the country code:
+#              moved from geoname.org to Geo::Coder::OpenCage
+#
 # 2022/07/22 - added to serie summary:
 #  "FirebaseDynamicLink": "https://adventurelab.page.link/QUas",
 
@@ -101,9 +104,11 @@ use File::Path qw(make_path);
 use File::Spec;
 use Data::Dumper;
 use open OUT => ':utf8';
+use Geo::Coder::OpenCage;
 
 # get a consumer key (needed for calls to LAB_API)
 my $ck;
+my $api_key;
 my $authfile = 'authfile.txt';   # TBD: this should be changable from the command line
 my $credentials = main::read_config ($authfile);
 if ($credentials->{'ck'}) {
@@ -111,11 +116,22 @@ if ($credentials->{'ck'}) {
 } else {
    die "The file $authfile does not contain the 'ck' property\n."
 }
+if ($credentials->{'api'}) {
+   $api_key = $credentials->{'api'};
+} else {
+   die "The file $authfile does not contain the 'api' property\n."
+}
 
 my $ua = LWP::UserAgent->new;
 $ua->agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.122 Safari/537.36");
 $ua->default_header ('X-Consumer-Key' => $ck);
 my $json = JSON->new->utf8->allow_nonref;
+
+# reverse geocoder
+my $Geocoder = Geo::Coder::OpenCage->new(
+  api_key => $api_key,
+  abbrv => 1,
+);
 
 # ----------------------------------------------------------------
 # Get a serie by its ID (e.g. 11ae0700-3716-4979-acde-0a8977e04271)
@@ -138,7 +154,7 @@ foreach my $serieId (@{$serieIds}) {
    
    # get and process individual LABs data
    my $data = fetchSwaggerData ("https://labs-api.geocaching.com/api/Adventures/$serieId");
-#   print Dumper ($data);
+   # print Dumper ($data);
 
    # make a directory according the series name
    my $name = unidecode ($data->{Title});   
@@ -151,7 +167,8 @@ foreach my $serieId (@{$serieIds}) {
 
    my $labid = $data->{Id};
    my $country = findCountry ($data->{Location}->{Latitude}, $data->{Location}->{Longitude});
-   my $dirName = "${name}__${labid}__${country}";
+   my $corrected_country = ($country eq '??' ? 'xx' : $country);
+   my $dirName = "${name}__${labid}__${corrected_country}";
    
    qmsg " [$dirName] ";
    unless (-d $dirName) {
@@ -270,6 +287,46 @@ sub extractImage {
 }   
 
 # ----------------------------------------------------------------
+# Read a simple config file made of key=value pairs.
+# Return a refernce to a hash with found pairs.
+# Only a LAB-API's consumer key (ck) is used.
+# ----------------------------------------------------------------
+sub read_config {
+   my $filename = shift;
+   my %result = read_file ($filename, err_mode => 'croak') =~ /^(\w+)=(.*)$/mg;
+   return \%result;
+}
+
+# ----------------------------------------------------------------
+# Return a country code where the given coordinates belong to
+# or '??' if not found or failed
+# ----------------------------------------------------------------
+sub findCountry {
+  my ($lat, $lon) = @_;
+   
+  $lat = sprintf ("%f", $lat);  # to get rid of the scientific notation
+  $lon = sprintf ("%f", $lon);
+
+  my $result = $Geocoder->reverse_geocode(lat => $lat, lng => $lon);
+  if ($result->{status}->{code} ne '200') {
+     # request failed
+     print STDERR "ERROR " .
+      $result->{status}->{code} . "\n" .
+      $result->{status}->{message} . "\n";
+     return '??';
+  }
+
+  # iterate over every requested location
+  # (but for our input it should be always only one location)
+  foreach my $res (@{$result->{results}}) {
+    my $c2_code = $res->{components}->{'ISO_3166-1_alpha-2'};
+    return ($c2_code or '??');
+  }
+}
+
+__END__
+
+# ----------------------------------------------------------------
 # Return a country code where the given coordinates belong to
 # or '??' if not found or failed
 # ----------------------------------------------------------------
@@ -292,15 +349,5 @@ sub findCountry {
    }
 }
 
-# ----------------------------------------------------------------
-# Read a simple config file made of key=value pairs.
-# Return a refernce to a hash with found pairs.
-# Only a LAB-API's consumer key (ck) is used.
-# ----------------------------------------------------------------
-sub read_config {
-   my $filename = shift;
-   my %result = read_file ($filename, err_mode => 'croak') =~ /^(\w+)=(.*)$/mg;
-   return \%result;
-}
 
 __END__
