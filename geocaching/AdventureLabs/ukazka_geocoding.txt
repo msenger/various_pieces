@@ -1,0 +1,145 @@
+$VAR1 = {
+          'rate' => {
+                      'remaining' => 2498,
+                      'reset' => 1670630400,
+                      'limit' => 2500
+                    },
+          'results' => [
+                         {
+                           'confidence' => 9,
+                           'geometry' => {
+                                           'lng' => '13.5341589',
+                                           'lat' => '49.9014373'
+                                         },
+                           'formatted' => '23112, Kozojedy, Czechia',
+                           'components' => {
+                                             'road' => '23112',
+                                             'village' => 'Kozojedy',
+                                             'state' => 'Southwest',
+                                             'municipality' => "okres Plze\x{148}-sever",
+                                             '_category' => 'road',
+                                             'hamlet' => "Rob\x{10d}ice",
+                                             'county' => "Plze\x{148}sk\x{fd} kraj",
+                                             '_type' => 'road',
+                                             'continent' => 'Europe',
+                                             'ISO_3166-1_alpha-3' => 'CZE',
+                                             'country' => 'Czechia',
+                                             'ISO_3166-2' => [
+                                                               'CZ-32',
+                                                               'CZ-325'
+                                                             ],
+                                             'political_union' => 'European Union',
+                                             'country_code' => 'cz',
+                                             'ISO_3166-1_alpha-2' => 'CZ'
+                                           },
+                           'bounds' => {
+                                         'northeast' => {
+                                                          'lat' => '49.9014873',
+                                                          'lng' => '13.5342089'
+                                                        },
+                                         'southwest' => {
+                                                          'lng' => '13.5341089',
+                                                          'lat' => '49.9013873'
+                                                        }
+                                       },
+                           'annotations' => {
+                                              'Mercator' => {
+                                                              'x' => '1506615.677',
+                                                              'y' => '6396520.183'
+                                                            },
+                                              'what3words' => {
+                                                                'words' => 'outsource.spool.shut'
+                                                              },
+                                              'sun' => {
+                                                         'rise' => {
+                                                                     'nautical' => 1670563980,
+                                                                     'astronomical' => 1670561640,
+                                                                     'apparent' => 1670568720,
+                                                                     'civil' => 1670566440
+                                                                   },
+                                                         'set' => {
+                                                                    'astronomical' => 1670605320,
+                                                                    'nautical' => 1670602980,
+                                                                    'apparent' => 1670598240,
+                                                                    'civil' => 1670600520
+                                                                  }
+                                                       },
+                                              'Maidenhead' => 'JN69sv46ci',
+                                              'DMS' => {
+                                                         'lat' => "49\x{b0} 54' 5.17428'' N",
+                                                         'lng' => "13\x{b0} 32' 2.97204'' E"
+                                                       },
+                                              'UN_M49' => {
+                                                            'regions' => {
+                                                                           'EUROPE' => '150',
+                                                                           'CZ' => '203',
+                                                                           'EASTERN_EUROPE' => '151',
+                                                                           'WORLD' => '001'
+                                                                         },
+                                                            'statistical_groupings' => [
+                                                                                         'MEDC'
+                                                                                       ]
+                                                          },
+                                              'MGRS' => '33UUR9473428702',
+                                              'qibla' => '134.36',
+                                              'timezone' => {
+                                                              'offset_string' => '+0100',
+                                                              'offset_sec' => 3600,
+                                                              'name' => 'Europe/Prague',
+                                                              'now_in_dst' => 0,
+                                                              'short_name' => 'CET'
+                                                            },
+                                              'flag' => "\x{1f1e8}\x{1f1ff}",
+                                              'callingcode' => 420,
+                                              'geohash' => 'u2cegur2by0k67cet69m',
+                                              'currency' => {
+                                                              'subunit_to_unit' => 100,
+                                                              'iso_numeric' => '203',
+                                                              'smallest_denomination' => 100,
+                                                              'subunit' => "Hal\x{e9}\x{159}",
+                                                              'name' => 'Czech Koruna',
+                                                              'alternate_symbols' => [],
+                                                              'html_entity' => '',
+                                                              'iso_code' => 'CZK',
+                                                              'thousands_separator' => ' ',
+                                                              'format' => '%n %u',
+                                                              'symbol' => "K\x{10d}",
+                                                              'decimal_mark' => ',',
+                                                              'symbol_first' => 0
+                                                            },
+                                              'roadinfo' => {
+                                                              'drive_on' => 'right',
+                                                              'road' => '23112',
+                                                              'speed_in' => 'km/h'
+                                                            },
+                                              'OSM' => {
+                                                         'edit_url' => 'https://www.openstreetmap.org/edit?node=7633530908#map=17/49.90144/13.53416',
+                                                         'url' => 'https://www.openstreetmap.org/?mlat=49.90144&mlon=13.53416#map=17/49.90144/13.53416',
+                                                         'note_url' => 'https://www.openstreetmap.org/note/new#map=17/49.90144/13.53416&layers=N'
+                                                       }
+                                            }
+                         }
+                       ],
+          'documentation' => 'https://opencagedata.com/api',
+          'stay_informed' => {
+                               'twitter' => 'https://twitter.com/OpenCage',
+                               'blog' => 'https://blog.opencagedata.com'
+                             },
+          'thanks' => 'For using an OpenCage API',
+          'status' => {
+                        'code' => 200,
+                        'message' => 'OK'
+                      },
+          'total_results' => 1,
+          'licenses' => [
+                          {
+                            'name' => 'see attribution guide',
+                            'url' => 'https://opencagedata.com/credits'
+                          }
+                        ],
+          'annotations' => {},
+          'timestamp' => {
+                           'created_unix' => 1670615261,
+                           'created_http' => 'Fri, 09 Dec 2022 19:47:41 GMT'
+                         }
+        };
