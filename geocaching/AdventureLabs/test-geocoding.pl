@@ -10,7 +10,7 @@ use Data::Dumper;
 my $lat = '49.90135';
 my $lon = '13.5351166666667';
 
-my $api_key = "0a0b553ae25a41ad87cd87e559c48b4e";
+my $api_key = "5a4e7e4622594d619c4ad26e041aa82b";
 
 my $Geocoder = Geo::Coder::OpenCage->new(
   api_key => $api_key,
@@ -18,6 +18,7 @@ my $Geocoder = Geo::Coder::OpenCage->new(
 );
 
 my $result = $Geocoder->reverse_geocode(lat => $lat, lng => $lon);
+#print Dumper ($result);
 
 # iterate over every requested location
 # (but for our input it should be always only one location)
