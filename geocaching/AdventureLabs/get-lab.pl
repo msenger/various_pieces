@@ -13,6 +13,8 @@ use Text::Unidecode;
 
 our $VERSION = '1.2.3';
 
+# 2023/01/12 - parametrs for Geocode changed
+#
 # 2022/12/09 - corrected how to obtain the country code:
 #              moved from geoname.org to Geo::Coder::OpenCage
 #
@@ -130,7 +132,7 @@ my $json = JSON->new->utf8->allow_nonref;
 # reverse geocoder
 my $Geocoder = Geo::Coder::OpenCage->new(
   api_key => $api_key,
-  abbrv => 1,
+  http => 1,
 );
 
 # ----------------------------------------------------------------
@@ -154,7 +156,7 @@ foreach my $serieId (@{$serieIds}) {
    
    # get and process individual LABs data
    my $data = fetchSwaggerData ("https://labs-api.geocaching.com/api/Adventures/$serieId");
-   # print Dumper ($data);
+#   print "\nDATA\n\n" . Dumper ($data);
 
    # make a directory according the series name
    my $name = unidecode ($data->{Title});   
@@ -237,17 +239,18 @@ foreach my $serieId (@{$serieIds}) {
 }
 
 # ----------------------------------------------------------------
-# Get swagger data using given $url. Convert th respose from JSON 
+# Get swagger data using given $url. Convert the respose from JSON 
 # and return it. Or die if an error occurs. 
 # ----------------------------------------------------------------
 sub fetchSwaggerData {
    my ($url) = @_;
    my $req = HTTP::Request->new (GET => "$url");
    my $res = $ua->request ($req);
+#   print Dumper ($res);
 
    #Check the outcome of the response
    if ($res->is_success) {
-      # convert JSON into perl structures and return it
+      # convert JSON into perl structures and return it      
       return ($json->decode ($res->content));
    } else {
       die " Received an unexpected result from swagger: " . $res->status_line . "\n" . $res->content;
@@ -307,7 +310,7 @@ sub findCountry {
   $lat = sprintf ("%f", $lat);  # to get rid of the scientific notation
   $lon = sprintf ("%f", $lon);
 
-  my $result = $Geocoder->reverse_geocode(lat => $lat, lng => $lon);
+  my $result = $Geocoder->reverse_geocode(lat => $lat, lng => $lon, abbrv => 1);
   if ($result->{status}->{code} ne '200') {
      # request failed
      print STDERR "ERROR " .

@@ -14,10 +14,10 @@ my $api_key = "5a4e7e4622594d619c4ad26e041aa82b";
 
 my $Geocoder = Geo::Coder::OpenCage->new(
   api_key => $api_key,
-  abbrv => 1,
+  http => 1,
 );
 
-my $result = $Geocoder->reverse_geocode(lat => $lat, lng => $lon);
+my $result = $Geocoder->reverse_geocode(lat => $lat, lng => $lon, abbrv => 1);
 #print Dumper ($result);
 
 # iterate over every requested location
