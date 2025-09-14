@@ -160,7 +160,7 @@ foreach my $serieId (@{$serieIds}) {
 
    # make a directory according the series name
    my $name = unidecode ($data->{Title});   
-   $name =~ s{[:/\\\?\*\|]}{_}g;    # some chars are not suitable for a file name   
+   $name =~ s{[:/\\\?\*\|\>]}{_}g; # some chars are not suitable for a file name   
    $name =~ s{\x5b\x3f\x5d}{_}ig; # removes U+1F43E (TBD better!)
    $name =~ s{^\s*|\s*$}{}g;      # trailing spaces in a file name does not work well under Windows
    $name =~ s{\.\.}{}g;           # more dots make a wrong file name (on windows)
